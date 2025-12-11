@@ -97,7 +97,7 @@ def main():
             %(prog)s --scan
 
             Once you have found your device you can run the logger:
-            %(prog)s --log log-file.log 00:11:22:33:44:55
+            %(prog)s --log log-file.log FE:97:60:CD:21:D4
             """))
     parser.add_argument(
         '--scan',

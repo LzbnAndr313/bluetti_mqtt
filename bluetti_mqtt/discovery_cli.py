@@ -94,7 +94,7 @@ def main():
             %(prog)s --scan
 
             Once you have found your device you can run the discovery tool:
-            %(prog)s --log log-file.log 00:11:22:33:44:55
+            %(prog)s --log log-file.log FE:97:60:CD:21:D4
 
             Before starting this process, it is advised to connect AC and DC
             inputs (if supported) as well as to attach DC and AC loads. This

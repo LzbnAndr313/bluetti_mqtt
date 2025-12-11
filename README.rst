@@ -45,14 +45,14 @@ Usage
 .. code-block:: bash
 
     $ bluetti-mqtt --scan
-    Found AC3001234567890123: address 00:11:22:33:44:55
-    $ bluetti-mqtt --broker [MQTT_BROKER_HOST] 00:11:22:33:44:55
+    Found AC3001234567890123: address FE:97:60:CD:21:D4
+    $ bluetti-mqtt --broker [MQTT_BROKER_HOST] FE:97:60:CD:21:D4
 
 If your MQTT broker has a username and password, you can pass those in.
 
 .. code-block:: bash
 
-    $ bluetti-mqtt --broker [MQTT_BROKER_HOST] --username username --password pass 00:11:22:33:44:55
+    $ bluetti-mqtt --broker [MQTT_BROKER_HOST] --username username --password pass FE:97:60:CD:21:D4
 
 By default the device is polled as quickly as possible, but if you'd like to
 collect less data, the polling interval can be adjusted.
@@ -60,7 +60,7 @@ collect less data, the polling interval can be adjusted.
 .. code-block:: bash
 
     # Poll every 60s
-    $ bluetti-mqtt --broker [MQTT_BROKER_HOST] --interval 60 00:11:22:33:44:55
+    $ bluetti-mqtt --broker [MQTT_BROKER_HOST] --interval 60 FE:97:60:CD:21:D4
 
 If you have multiple devices within bluetooth range, you can monitor all of
 them with just a single command. We can only talk to one device at a time, so
@@ -69,7 +69,7 @@ not set an interval.
 
 .. code-block:: bash
 
-    $ bluetti-mqtt --broker [MQTT_BROKER_HOST] 00:11:22:33:44:55 00:11:22:33:44:66
+    $ bluetti-mqtt --broker [MQTT_BROKER_HOST] FE:97:60:CD:21:D4 00:11:22:33:44:66
 
 Background Service
 ------------------
@@ -93,7 +93,7 @@ rebooting, you'll also need to run ``sudo systemctl enable bluetti-mqtt``.
     RestartSec=30
     TimeoutStopSec=15
     User=your_username_here
-    ExecStart=/home/your_username_here/.local/bin/bluetti-mqtt --broker [MQTT_BROKER_HOST] 00:11:22:33:44:55
+    ExecStart=/home/your_username_here/.local/bin/bluetti-mqtt --broker [MQTT_BROKER_HOST] FE:97:60:CD:21:D4
 
     [Install]
     WantedBy=multi-user.target
@@ -121,7 +121,7 @@ the device and log in a standardised format.
 
 .. code-block:: bash
 
-    $ bluetti-logger --log the-log-file.log 00:11:22:33:44:55
+    $ bluetti-logger --log the-log-file.log FE:97:60:CD:21:D4
 
 While the logger is running, change settings on the device and take note of the
 time when you made the change, waiting ~ 1 minute between changes. Note that
@@ -143,5 +143,5 @@ optimal performance.
 .. code-block:: bash
 
     $ bluetti-discovery --scan
-    Found AC3001234567890123: address 00:11:22:33:44:55
-    $ bluetti-discovery --log the-log-file.log 00:11:22:33:44:55
+    Found AC3001234567890123: address FE:97:60:CD:21:D4
+    $ bluetti-discovery --log the-log-file.log FE:97:60:CD:21:D4
