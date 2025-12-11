@@ -72,7 +72,7 @@ class BluetoothClient:
             if self.client:
                 await self.client.disconnect()
 
-async def _connect(self):
+    async def _connect(self):
         """Establish connection to the bluetooth device.
 
         On Linux / BlueZ it is possible for the underlying D-Bus device object
