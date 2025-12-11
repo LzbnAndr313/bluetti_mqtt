@@ -134,8 +134,8 @@ class BluetoothClient:
             logging.exception(f'Error connecting to device {self.address}:')
             await asyncio.sleep(5)
 
-        except (EOFError, asyncio.TimeoutError):
-            logging.exception(f'Error connecting to device {self.address}:')
+        except (EOFError, asyncio.TimeoutError) as err:
+            logging.warning(f'Error connecting to device {self.address}: {err}')
             await asyncio.sleep(5)
 
     async def _get_name(self):
