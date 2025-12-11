@@ -2,8 +2,8 @@ import asyncio
 from enum import Enum, auto, unique
 import logging
 from typing import Union
-from bleak import BleakClient, BleakError
-from bleak.exc import BleakDeviceNotFoundError
+from bleak import BleakClient, BleakError, BleakScanner
+# from bleak.exc import BleakDeviceNotFoundError  # no longer needed
 from bluetti_mqtt.core import DeviceCommand
 from .exc import BadConnectionError, ModbusError, ParseError
 
@@ -72,17 +72,71 @@ class BluetoothClient:
             if self.client:
                 await self.client.disconnect()
 
-    async def _connect(self):
-        """Establish connection to the bluetooth device"""
+async def _connect(self):
+        """Establish connection to the bluetooth device.
+
+        On Linux / BlueZ it is possible for the underlying D-Bus device object
+        to disappear (e.g. "device 'dev_xxx' not found"). In that case we
+        trigger a scan and recreate the BleakClient from the scanned device.
+        """
         try:
+            # First, try a straightforward connect using the current client
             await self.client.connect()
             self.state = ClientState.CONNECTED
             logging.info(f'Connected to device: {self.address}')
-        except BleakDeviceNotFoundError:
-            logging.debug(f'Error connecting to device {self.address}: Not found')
-        except (BleakError, EOFError, asyncio.TimeoutError):
+            return
+
+        except BleakError as err:
+            msg = str(err)
+
+            # Common BlueZ case: "device 'dev_FE_97_60_CD_21_D4' not found"
+            if "not found" in msg or "not available" in msg:
+                logging.warning(
+                    f'Device {self.address} not found, rescanning before retry: {msg}'
+                )
+
+                # Try to rediscover the device by address
+                dev = None
+                try:
+                    dev = await BleakScanner.find_device_by_address(
+                        self.address,
+                        timeout=10.0,
+                    )
+                except Exception:
+                    # Scanner itself failed; we'll just back off and retry later
+                    logging.warning(
+                        f'BleakScanner failed while searching for {self.address}',
+                    )
+
+                if dev is None:
+                    # Device really not there now – back off, stay NOT_CONNECTED
+                    logging.warning(
+                        f'Unable to rediscover {self.address}, will retry later'
+                    )
+                    await asyncio.sleep(5)
+                    return
+
+                # Rebuild the client based on freshly discovered BLEDevice
+                self.client = BleakClient(dev)
+                try:
+                    await self.client.connect()
+                    self.state = ClientState.CONNECTED
+                    logging.info(f'Connected to device after rescan: {self.address}')
+                    return
+                except BleakError:
+                    logging.exception(
+                        f'Error connecting to device {self.address} after rescan:'
+                    )
+                    await asyncio.sleep(5)
+                    return
+
+            # Any other BleakError: log full traceback and back off
             logging.exception(f'Error connecting to device {self.address}:')
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
+
+        except (EOFError, asyncio.TimeoutError):
+            logging.exception(f'Error connecting to device {self.address}:')
+            await asyncio.sleep(5)
 
     async def _get_name(self):
         """Get device name, which can be parsed for type"""
@@ -161,7 +215,11 @@ class BluetoothClient:
         self.command_queue.task_done()
 
     async def _disconnect(self):
-        await self.client.disconnect()
+        if self.client:
+            try:
+                await self.client.disconnect()
+            except BleakError:
+                logging.debug(f'Error while disconnecting from {self.address}, ignoring')
         logging.warn(f'Delayed reconnect to {self.address} after error')
         await asyncio.sleep(5)
         self.state = ClientState.NOT_CONNECTED
