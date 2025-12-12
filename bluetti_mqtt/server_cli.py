@@ -72,7 +72,8 @@ class CommandLineHandler:
             parser.print_help()
 
     def start(self, args: argparse.Namespace):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
         # Register signal handlers for safe shutdown
         if sys.platform != 'win32':

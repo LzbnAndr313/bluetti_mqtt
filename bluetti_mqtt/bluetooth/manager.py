@@ -19,16 +19,24 @@ class MultiDeviceManager:
 
         # Perform a blocking scan just to speed up initial connect
         scanner = BleakScanner()
-        try:
-            await scanner.start()
-            await asyncio.sleep(2.0)
-            await scanner.stop()
-        except BleakDBusError as change:
-            if 'org.bluez.Error.InProgress' in str(change):
-                logging.warning('Bluetooth scan currently in progress, proceeding with available devices...')
-                await asyncio.sleep(2.0)
-            else:
-                raise
+        
+        # Try to scan multiple times if busy
+        # This is critical because if we don't get a BLEDevice object from the scan,
+        # the client will try to connect using just the address string, which often
+        # leads to an infinite loop of "deferred connection" because it can't verify
+        # the device presence on the bus without a new scan (which fails).
+        for i in range(5):
+            try:
+                await scanner.start()
+                await asyncio.sleep(5.0)
+                await scanner.stop()
+                break
+            except BleakDBusError as change:
+                if 'org.bluez.Error.InProgress' in str(change):
+                    logging.warning(f'Scan in progress, waiting to retry ({i+1}/5)...')
+                    await asyncio.sleep(5.0)
+                else:
+                    raise
 
         # Start client loops
         # Use discovered device if available, otherwise fallback to address string
