@@ -2,6 +2,9 @@
 bluetti_mqtt
 ============
 
+** This is a fork of the original project [bluetti_mqtt](https://github.com/ftrueck/bluetti_mqtt).
+The goal of this fork is the attempt to fix the issue with the AC200L device.**
+
 This tool provides an MQTT interface to Bluetti power stations. State will be
 published to the ``bluetti/state/[DEVICE NAME]/[PROPERTY]`` topic, and commands
 can be sent to the ``bluetti/command/[DEVICE NAME]/[PROPERTY]`` topic.
@@ -29,7 +32,7 @@ Installation
 
 .. code-block:: bash
 
-    $ pip install git+https://github.com/ftrueck/bluetti_mqtt
+    $ pip install git+https://github.com/LzbnAndr313/bluetti_mqtt
 
 
 Connection Problems
@@ -74,11 +77,10 @@ not set an interval.
 Background Service
 ------------------
 
-If you are running on a platform with systemd, you can use the following as a
-template. It should be placed in ``/etc/systemd/system/bluetti-mqtt.service``.
-Once you've written the file, you'll need to run
-``sudo systemctl start bluetti-mqtt``. If you want it to run automatically after
-rebooting, you'll also need to run ``sudo systemctl enable bluetti-mqtt``.
+If you are running on a platform with systemd, you can use the following as a template. 
+It should be placed in ``/etc/systemd/system/bluetti-mqtt.service``.
+Once you've written the file, you'll need to run ``sudo systemctl start bluetti-mqtt``.
+If you want it to run automatically after rebooting, you'll also need to run ``sudo systemctl enable bluetti-mqtt``.
 
 .. code-block:: bash
 
