@@ -17,36 +17,30 @@ class MultiDeviceManager:
     async def run(self):
         logging.info(f'Connecting to clients: {self.addresses}')
 
-        # Check if Bluetooth adapter is ready before attempting scan
-        try:
-            async with BleakScanner() as scanner:
-                pass
-            logging.debug('Bluetooth adapter is ready')
-        except Exception as e:
-            logging.error(f'Bluetooth adapter not ready: {e}')
-            logging.error('Waiting 10 seconds before retrying...')
-            await asyncio.sleep(10)
-
         # Perform a blocking scan just to speed up initial connect
         scanner = BleakScanner()
+        scan_successful = False
         
-        # Try to scan multiple times if busy
-        # This is critical because if we don't get a BLEDevice object from the scan,
-        # the client will try to connect using just the address string, which often
-        # leads to an infinite loop of "deferred connection" because it can't verify
-        # the device presence on the bus without a new scan (which fails).
+        # Try to scan multiple times if adapter is busy
         for i in range(5):
             try:
                 await scanner.start()
                 await asyncio.sleep(5.0)
                 await scanner.stop()
+                scan_successful = True
+                logging.debug('Bluetooth scan completed successfully')
                 break
-            except BleakDBusError as change:
-                if 'org.bluez.Error.InProgress' in str(change):
+            except BleakDBusError as e:
+                if 'org.bluez.Error.InProgress' in str(e):
                     logging.warning(f'Scan in progress, waiting to retry ({i+1}/5)...')
                     await asyncio.sleep(5.0)
                 else:
-                    raise
+                    logging.error(f'
+Bluetooth scan error: {e}')
+                    break
+        
+        if not scan_successful:
+            logging.warning('Scan failed, will attempt direct connection to devices')
 
         # Start client loops
         # Use discovered device if available, otherwise fallback to address string
