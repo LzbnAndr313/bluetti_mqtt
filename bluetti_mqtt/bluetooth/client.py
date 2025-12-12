@@ -3,6 +3,7 @@ from enum import Enum, auto, unique
 import logging
 from typing import Union
 from bleak import BleakClient, BleakError, BleakScanner
+from bleak.exc import BleakDeviceNotFoundError, BleakCharacteristicNotFoundError
 from bleak.backends.device import BLEDevice
 # from bleak.exc import BleakDeviceNotFoundError  # no longer needed
 from bluetti_mqtt.core import DeviceCommand
@@ -63,12 +64,21 @@ class BluetoothClient:
             logging.info(f'Disconnecting from device: {self.address}')
             await self.client.disconnect()
 
+    async def _ensure_services(self):
+        """Ensure GATT services are resolved before accessing characteristics."""
+        if not self.client.services:
+            services = await self.client.get_services()
+            logging.debug(f'Resolved {len(services)} services for {self.address}')
+        return True
+
     async def run(self):
         try:
             while True:
                 if self.state == ClientState.NOT_CONNECTED:
                     await self._connect()
                 elif self.state == ClientState.CONNECTED:
+                    # Ensure services are resolved before accessing characteristics
+                    await self._ensure_services()
                     if not self.name:
                         await self._get_name()
                     else:
@@ -100,10 +110,12 @@ class BluetoothClient:
             self.connection_retries = 0
             return
 
-        except BleakError as err:
-            msg = str(err)
-
-            # Common BlueZ case: "device 'dev_FE_97_60_CD_21_D4' not found"
+        except BleakDeviceNotFoundError:
+            logging.warning(f'Device {self.address} not found in Bluetooth range')
+            msg = "not found"
+            
+            # Common BlueZ case: device object disappeared from D-Bus
+            # Try to find the device with a fresh scan
             if "not found" in msg or "not available" in msg:
                 logging.warning(
                     f'Device {self.address} not found, rescanning before retry: {msg}'
@@ -143,6 +155,10 @@ class BluetoothClient:
                     )
                     await asyncio.sleep(5)
                     return
+
+        except BleakError as err:
+            # Catch any other BleakError types (connection failures, etc.)
+            msg = str(err)
 
             # Any other BleakError: log full traceback and back off
             # Any other BleakError: log full traceback and back off

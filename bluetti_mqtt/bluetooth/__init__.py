@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 from typing import Set
@@ -13,14 +14,24 @@ DEVICE_NAME_RE = re.compile(r'^(AC200M|AC200L|AC300|AC500|AC60|AC70|AC180|EP500P
 
 
 async def scan_devices():
+    """
+    Scan for Bluetti devices using detection callback for real-time discovery.
+    This is more efficient than scanning all devices and filtering afterwards.
+    """
     print('Scanning....')
-    devices = await BleakScanner.discover(timeout=10.0)
-    if len(devices) == 0:
+    found_devices = []
+    
+    def detection_callback(device: BLEDevice, advertisement_data):
+        """Called when a BLE device is discovered during scanning."""
+        if device.name and DEVICE_NAME_RE.match(device.name):
+            print(f'Found {device.name}: address {device.address}')
+            found_devices.append(device)
+    
+    async with BleakScanner(detection_callback=detection_callback):
+        await asyncio.sleep(10.0)
+    
+    if len(found_devices) == 0:
         print('0 devices found - something probably went wrong')
-    else:
-        bluetti_devices = [d for d in devices if d.name and DEVICE_NAME_RE.match(d.name)]
-        for d in bluetti_devices:
-            print(f'Found {d.name}: address {d.address}')
 
 
 def build_device(address: str, name: str):
