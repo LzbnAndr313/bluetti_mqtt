@@ -131,7 +131,10 @@ class BluetoothClient:
                     return
 
             # Any other BleakError: log full traceback and back off
-            logging.exception(f'Error connecting to device {self.address}:')
+            if "InProgress" in msg:
+                logging.warning(f'Bluetooth scan in progress, deferring connection to {self.address}')
+            else:
+                logging.exception(f'Error connecting to device {self.address}:')
             await asyncio.sleep(5)
 
         except (EOFError, asyncio.TimeoutError) as err:
