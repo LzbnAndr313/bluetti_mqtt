@@ -17,6 +17,16 @@ class MultiDeviceManager:
     async def run(self):
         logging.info(f'Connecting to clients: {self.addresses}')
 
+        # Check if Bluetooth adapter is ready before attempting scan
+        try:
+            async with BleakScanner() as scanner:
+                pass
+            logging.debug('Bluetooth adapter is ready')
+        except Exception as e:
+            logging.error(f'Bluetooth adapter not ready: {e}')
+            logging.error('Waiting 10 seconds before retrying...')
+            await asyncio.sleep(10)
+
         # Perform a blocking scan just to speed up initial connect
         scanner = BleakScanner()
         

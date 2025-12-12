@@ -14,7 +14,7 @@ DEVICE_NAME_RE = re.compile(r'^(AC200M|AC200L|AC300|AC500|AC60|AC70|AC180|EP500P
 
 async def scan_devices():
     print('Scanning....')
-    devices = await BleakScanner.discover()
+    devices = await BleakScanner.discover(timeout=10.0)
     if len(devices) == 0:
         print('0 devices found - something probably went wrong')
     else:
@@ -55,7 +55,7 @@ def build_device(address: str, name: str):
 
 async def check_addresses(addresses: Set[str]):
     logging.debug(f'Checking we can connect: {addresses}')
-    devices = await BleakScanner.discover()
+    devices = await BleakScanner.discover(timeout=10.0)
     filtered = [d for d in devices if d.address in addresses]
     logging.debug(f'Found devices: {filtered}')
 

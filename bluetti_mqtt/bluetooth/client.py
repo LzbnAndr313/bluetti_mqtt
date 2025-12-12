@@ -57,6 +57,12 @@ class BluetoothClient:
     async def perform_nowait(self, cmd: DeviceCommand):
         await self.command_queue.put((cmd, None))
 
+    async def cleanup(self):
+        """Cleanup resources and disconnect from device."""
+        if self.client and self.client.is_connected:
+            logging.info(f'Disconnecting from device: {self.address}')
+            await self.client.disconnect()
+
     async def run(self):
         try:
             while True:
