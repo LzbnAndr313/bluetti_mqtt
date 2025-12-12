@@ -35,8 +35,7 @@ class MultiDeviceManager:
                     logging.warning(f'Scan in progress, waiting to retry ({i+1}/5)...')
                     await asyncio.sleep(5.0)
                 else:
-                    logging.error(f'
-Bluetooth scan error: {e}')
+                    logging.error(f'Bluetooth scan error: {e}')
                     break
         
         if not scan_successful:
