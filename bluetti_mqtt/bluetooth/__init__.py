@@ -14,14 +14,43 @@ DEVICE_NAME_RE = re.compile(r'^(AC200M|AC200L|AC300|AC500|AC60|AC70|AC180|EP500P
 
 
 async def scan_devices():
+    """Scan for Bluetti devices with retry logic for busy adapter."""
     print('Scanning....')
-    devices = await BleakScanner.discover(timeout=10.0)
+    
+    devices = []
+    max_retries = 3
+    
+    for attempt in range(max_retries):
+        try:
+            devices = await BleakScanner.discover(timeout=10.0)
+            break  # Success!
+        except Exception as e:
+            if "InProgress" in str(e) and attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 2  # 2s, 4s, 6s
+                print(f'Bluetooth adapter busy, retrying in {wait_time}s... ({attempt + 1}/{max_retries})')
+                await asyncio.sleep(wait_time)
+            elif attempt == max_retries - 1:
+                print(f'ERROR: Bluetooth adapter busy after {max_retries} attempts. Try again later or disable other Bluetooth scans.')
+                return
+            else:
+                # Other error, re-raise
+                raise
+    
     if len(devices) == 0:
         print('0 devices found - something probably went wrong')
     else:
         bluetti_devices = [d for d in devices if d.name and DEVICE_NAME_RE.match(d.name)]
-        for d in bluetti_devices:
-            print(f'Found {d.name}: address {d.address}')
+        if len(bluetti_devices) == 0:
+            print(f'Found {len(devices)} BLE devices, but no Bluetti devices.')
+            print('NOTE: One device was detected with Bluetti manufacturer data:')
+            for d in devices:
+                if hasattr(d, 'metadata') and d.metadata and 'manufacturer_data' in d.metadata:
+                    for manuf_id, data in d.metadata['manufacturer_data'].items():
+                        if manuf_id == 19522 or b'BLUETT' in data:
+                            print(f'  → {d.name or "Unknown"}: address {d.address}')
+        else:
+            for d in bluetti_devices:
+                print(f'Found {d.name}: address {d.address}')
 
 
 def build_device(address: str, name: str):
