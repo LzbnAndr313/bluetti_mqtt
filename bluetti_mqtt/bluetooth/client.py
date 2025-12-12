@@ -42,6 +42,7 @@ class BluetoothClient:
         self.command_queue = asyncio.Queue()
         self.notify_future = None
         self.loop = asyncio.get_running_loop()
+        self.connection_retries = 0
 
 
     @property
@@ -90,6 +91,7 @@ class BluetoothClient:
             await self.client.connect()
             self.state = ClientState.CONNECTED
             logging.info(f'Connected to device: {self.address}')
+            self.connection_retries = 0
             return
 
         except BleakError as err:
@@ -137,11 +139,20 @@ class BluetoothClient:
                     return
 
             # Any other BleakError: log full traceback and back off
+            # Any other BleakError: log full traceback and back off
             if "InProgress" in msg:
                 logging.warning(f'Bluetooth scan in progress, deferring connection to {self.address}')
             else:
                 logging.exception(f'Error connecting to device {self.address}:')
-            await asyncio.sleep(5)
+            
+            # Smart Backoff Logic
+            self.connection_retries += 1
+            if self.connection_retries >= 5:
+                logging.warning(f'Failed to connect to {self.address} after {self.connection_retries} attempts. Device might be offline. Pausing for 5 minutes...')
+                await asyncio.sleep(300)
+                self.connection_retries = 0
+            else:
+                await asyncio.sleep(5)
 
         except (EOFError, asyncio.TimeoutError) as err:
             logging.warning(f'Error connecting to device {self.address}: {err}')
