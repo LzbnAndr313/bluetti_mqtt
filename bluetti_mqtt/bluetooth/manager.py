@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List
 from bleak import BleakScanner
+from bleak.exc import BleakDBusError
 from bluetti_mqtt.core import DeviceCommand
 from .client import BluetoothClient
 
@@ -17,7 +18,13 @@ class MultiDeviceManager:
         logging.info(f'Connecting to clients: {self.addresses}')
 
         # Perform a blocking scan just to speed up initial connect
-        await BleakScanner.discover()
+        try:
+            await BleakScanner.discover()
+        except BleakDBusError as change:
+            if 'org.bluez.Error.InProgress' in str(change):
+                logging.warning('Bluetooth scan currently in progress, proceeding...')
+            else:
+                raise
 
         # Start client loops
         self.clients = {a: BluetoothClient(a) for a in self.addresses}
