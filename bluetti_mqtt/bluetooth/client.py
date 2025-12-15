@@ -65,7 +65,7 @@ class BluetoothClient:
                 elif self.state == ClientState.DISCONNECTING:
                     await self._disconnect()
                 else:
-                    logging.warn(f'Unexpected current state {self.state}')
+                    logging.warning(f'Unexpected current state {self.state}')
                     self.state = ClientState.NOT_CONNECTED
         finally:
             # Ensure that we disconnect
@@ -79,19 +79,19 @@ class BluetoothClient:
             self.state = ClientState.CONNECTED
             logging.info(f'Connected to device: {self.address}')
         except BleakDeviceNotFoundError:
-            logging.debug(f'Error connecting to device {self.address}: Not found')
+            logging.info(f'Error connecting to device {self.address}: Not found - recreating client')
             # Recreate client to get fresh device path from BlueZ
             await self._recreate_client()
             await asyncio.sleep(1)
-        except (BleakError, EOFError, asyncio.TimeoutError) as e:
+        except (BleakError) as e:
             # Check if this is a "device not found" error from BlueZ (specific error message)
-            error_msg = str(e).lower()
-            if "'not found'" in error_msg or "not found" in error_msg:
-                logging.debug(f'Device path stale for {self.address}, recreating client: {e}')
-                # Recreate client to get fresh device path from BlueZ
-                await self._recreate_client()
-            else:
-                logging.exception(f'Error connecting to device {self.address}:')
+            logging.info(f'Bleak error for {self.address}, recreating client: {e}')
+            await self._recreate_client()
+            await asyncio.sleep(1)
+        except (EOFError, asyncio.TimeoutError) as e:
+            logging.info(f'Device path stale for {self.address}, recreating client: {e}')
+            # Recreate client to get fresh device path from BlueZ
+            await self._recreate_client()
             await asyncio.sleep(1)
 
     async def _recreate_client(self):
@@ -183,7 +183,7 @@ class BluetoothClient:
 
     async def _disconnect(self):
         await self.client.disconnect()
-        logging.warn(f'Delayed reconnect to {self.address} after error')
+        logging.warning(f'Delayed reconnect to {self.address} after error')
         await asyncio.sleep(5)
         self.state = ClientState.NOT_CONNECTED
 
