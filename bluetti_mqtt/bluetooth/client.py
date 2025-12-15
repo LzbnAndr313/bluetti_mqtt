@@ -80,8 +80,28 @@ class BluetoothClient:
             logging.info(f'Connected to device: {self.address}')
         except BleakDeviceNotFoundError:
             logging.debug(f'Error connecting to device {self.address}: Not found')
-        except (BleakError, EOFError, asyncio.TimeoutError):
-            logging.exception(f'Error connecting to device {self.address}:')
+            # Recreate client to get fresh device path from BlueZ
+            if self.client:
+                try:
+                    await self.client.disconnect()
+                except Exception:
+                    pass
+            self.client = BleakClient(self.address)
+            await asyncio.sleep(1)
+        except (BleakError, EOFError, asyncio.TimeoutError) as e:
+            # Check if this is a "device not found" error from BlueZ
+            error_msg = str(e).lower()
+            if 'not found' in error_msg or 'device' in error_msg:
+                logging.debug(f'Device path stale for {self.address}, recreating client: {e}')
+                # Recreate client to get fresh device path from BlueZ
+                if self.client:
+                    try:
+                        await self.client.disconnect()
+                    except Exception:
+                        pass
+                self.client = BleakClient(self.address)
+            else:
+                logging.exception(f'Error connecting to device {self.address}:')
             await asyncio.sleep(1)
 
     async def _get_name(self):
