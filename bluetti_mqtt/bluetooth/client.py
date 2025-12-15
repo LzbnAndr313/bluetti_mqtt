@@ -81,28 +81,29 @@ class BluetoothClient:
         except BleakDeviceNotFoundError:
             logging.debug(f'Error connecting to device {self.address}: Not found')
             # Recreate client to get fresh device path from BlueZ
-            if self.client:
-                try:
-                    await self.client.disconnect()
-                except Exception:
-                    pass
-            self.client = BleakClient(self.address)
+            await self._recreate_client()
             await asyncio.sleep(1)
         except (BleakError, EOFError, asyncio.TimeoutError) as e:
-            # Check if this is a "device not found" error from BlueZ
+            # Check if this is a "device not found" error from BlueZ (specific error message)
             error_msg = str(e).lower()
-            if 'not found' in error_msg or 'device' in error_msg:
+            if "'not found'" in error_msg or "not found" in error_msg:
                 logging.debug(f'Device path stale for {self.address}, recreating client: {e}')
                 # Recreate client to get fresh device path from BlueZ
-                if self.client:
-                    try:
-                        await self.client.disconnect()
-                    except Exception:
-                        pass
-                self.client = BleakClient(self.address)
+                await self._recreate_client()
             else:
                 logging.exception(f'Error connecting to device {self.address}:')
             await asyncio.sleep(1)
+
+    async def _recreate_client(self):
+        """Safely recreate the BleakClient instance"""
+        if self.client:
+            try:
+                # Add timeout to prevent hanging
+                await asyncio.wait_for(self.client.disconnect(), timeout=2.0)
+            except (Exception, asyncio.TimeoutError):
+                # Ignore any errors during disconnect - client might be in bad state
+                pass
+        self.client = BleakClient(self.address)
 
     async def _get_name(self):
         """Get device name, which can be parsed for type"""
